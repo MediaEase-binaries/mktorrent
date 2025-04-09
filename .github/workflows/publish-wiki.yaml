@@ -1,0 +1,44 @@
+name: Publish Wiki
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - docs/**
+      - .github/workflows/publish-wiki.yml
+  workflow_dispatch:
+
+concurrency:
+  group: publish-wiki
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get last two tags
+        id: tags
+        run: |
+          CURRENT_TAG=$(git describe --tags --abbrev=0)
+          LATEST_TAG=$(git describe --tags --abbrev=0 $CURRENT_TAG^)
+          echo "current_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Update docs with version info
+        run: |
+          find docs/ -type f -exec sed -i "s/\${{ steps.tags.outputs.latest_tag }}/${{ steps.tags.outputs.current_tag }}/g" {} \;
+
+      - name: Publish to Wiki
+        uses: Andrew-Chen-Wang/github-wiki-action@v4
+        with:
+          path: docs/
+          commit-message: "docs: update documentation [automated]" 

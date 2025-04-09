@@ -3,6 +3,9 @@ name: Build Mktorrent
 on:
   push:
     branches: [master]
+    paths:
+      - 'CMakeLists.txt'
+      - '.github/workflows/build.yaml'
 
 permissions:
   contents: write
@@ -59,7 +62,6 @@ jobs:
           chmod +x "$mktorrent_bin"
           cp $mktorrent_bin "$PKG_DIR/usr/bin/mktorrent"
           installed_size=$(du -s -k "$PKG_DIR" | cut -f1)
-          # temporary file
           temp_file=$(mktemp)
           cat > "$temp_file" <<EOF
           Description: Simple command-line torrent file creator
