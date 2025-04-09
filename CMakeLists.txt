@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(mktorrent
-    VERSION 1.3.1
+    VERSION 1.3.2
     DESCRIPTION "A simple command-line utility to create BitTorrent metainfo files, written in C"
     HOMEPAGE_URL "https://github.com/MediaEase/mktorrent"
     LANGUAGES C
