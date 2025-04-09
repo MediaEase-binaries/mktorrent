@@ -25,9 +25,17 @@ jobs:
 
       - name: Build
         run: |
-          mk_version=$(awk '/^version =/ {print $3}' Makefile)
+          mk_version=$(awk '/project\(mktorrent/,/\)/ { if ($1 ~ /VERSION/) print $2 }' CMakeLists.txt | tr -d ')')
           echo "MKTORRENT_VERSION=$mk_version" >> $GITHUB_ENV
-          make USE_PTHREADS=${{ matrix.pthreads == 'ON' && '1' || '0' }} USE_OPENSSL=${{ matrix.openssl == 'ON' && '1' || '0' }} USE_LONG_OPTIONS=1
+          cmake -S . -B build \
+            -DMKTORRENT_LONG_OPTIONS=ON \
+            -DMKTORRENT_PTHREADS=${{ matrix.pthreads }} \
+            -DMKTORRENT_OPENSSL=${{ matrix.openssl }} \
+            -DMKTORRENT_USE_GITREV_VERSION=ON \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            --graphviz=build/target_graph.dot
+          cmake --build build
 
       - name: Get short commit hash for artifact name
         id: short-hash
@@ -106,9 +114,9 @@ jobs:
       - name: Extract Version from Makefile
         id: extract_version
         run: |
-          version=$(awk '/^version =/ {print $3}' Makefile)
-          echo "Detected version: $version"
-          echo "version=$version" >> $GITHUB_OUTPUT
+          mk_version=$(awk '/project\(mktorrent/,/\)/ { if ($1 ~ /VERSION/) print $2 }' CMakeLists.txt | tr -d ')')
+          echo "Detected version: $mk_version"
+          echo "version=$mk_version" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
