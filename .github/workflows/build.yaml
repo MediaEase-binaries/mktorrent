@@ -1,0 +1,141 @@
+name: Build Mktorrent
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build mktorrent
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        openssl: ["ON", "OFF"]
+        pthreads: ["ON", "OFF"]
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          mk_version=$(awk '/^version =/ {print $3}' Makefile)
+          echo "MKTORRENT_VERSION=$mk_version" >> $GITHUB_ENV
+          make USE_PTHREADS=${{ matrix.pthreads == 'ON' && '1' || '0' }} USE_OPENSSL=${{ matrix.openssl == 'ON' && '1' || '0' }} USE_LONG_OPTIONS=1
+
+      - name: Get short commit hash for artifact name
+        id: short-hash
+        run: |
+          short_hash=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "MKTORRENT_SHORT_HASH=$short_hash" >> $GITHUB_ENV
+
+      - name: Prepare artifacts
+        run: |
+          mkdir artifacts
+          full_version="_${{ env.MKTORRENT_VERSION }}_openssl-${{ matrix.openssl }}_pthreads-${{ matrix.pthreads }}-${{ matrix.os }}"
+          echo "FULL_VERSION=$full_version" >> $GITHUB_ENV
+
+      - name: Build Debian Package
+        run: |
+          PKG_DIR="package_mktorrent"
+          mkdir -p "$PKG_DIR/DEBIAN" "$PKG_DIR/usr/bin"
+          mktorrent_bin=$(find . -type f -name "mktorrent" | head -n 1)
+          echo "MKTORRENT_BIN=$mktorrent_bin"
+          find . -type f -exec file {} \; | grep ELF | cut -d: -f1 | xargs --no-run-if-empty strip --strip-unneeded
+          chmod +x "$mktorrent_bin"
+          cp $mktorrent_bin "$PKG_DIR/usr/bin/mktorrent"
+          installed_size=$(du -s -k "$PKG_DIR" | cut -f1)
+          # temporary file
+          temp_file=$(mktemp)
+          cat > "$temp_file" <<EOF
+          Description: Simple command-line torrent file creator
+           .
+           mktorrent is a simple and efficient CLI utility for creating .torrent files.
+           .
+           Compiler options:
+            - USE_OPENSSL=${{ matrix.openssl == 'ON' && '1' || '0' }}
+            - USE_PTHREADS=${{ matrix.pthreads == 'ON' && '1' || '0' }}
+            - USE_LONG_OPTIONS=1
+           . 
+           Compiled on $(date +%Y-%m-%d).
+          EOF
+          cat > "$PKG_DIR/DEBIAN/control" <<EOF
+          Package: mktorrent
+          Version: ${{ env.MKTORRENT_VERSION }}-1build1
+          Architecture: amd64
+          Maintainer: ${COMMITTER_NAME} <${COMMITTER_EMAIL}>
+          Installed-Size: $installed_size
+          Depends: libc6, libssl3
+          Section: net
+          Priority: optional
+          Homepage: https://github.com/MediaEase/mktorrent
+          EOF
+          cat "$temp_file" >> "$PKG_DIR/DEBIAN/control"
+          cd "$PKG_DIR"
+          find usr -type f -exec md5sum {} \; > DEBIAN/md5sums
+          cd ..
+          dpkg-deb --build -Zxz -z9 -Sextreme "$PKG_DIR" "mktorrent${{ env.FULL_VERSION }}_amd64.deb"
+          mkdir -p artifacts
+          mv "mktorrent${{ env.FULL_VERSION }}_amd64.deb" artifacts/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.os }}-openssl-${{ matrix.openssl }}-pthreads-${{ matrix.pthreads }}
+          path: artifacts/
+
+  create_release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Version from Makefile
+        id: extract_version
+        run: |
+          version=$(awk '/^version =/ {print $3}' Makefile)
+          echo "Detected version: $version"
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded_artifacts
+
+      - name: Create Git Tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMITTER_NAME: ${{ secrets.COMMITTER_NAME }}
+          COMMITTER_EMAIL: ${{ secrets.COMMITTER_EMAIL }}
+        run: |
+          git config user.name "${COMMITTER_NAME}"
+          git config user.email "${COMMITTER_EMAIL}"
+          git tag v${{ steps.extract_version.outputs.version }}
+          git push origin v${{ steps.extract_version.outputs.version }}
+
+      - name: Prepare release assets
+        run: |
+          mkdir release_assets
+          find downloaded_artifacts -type f -exec cp {} release_assets/ \;
+
+      - name: Create GitHub Release with Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.extract_version.outputs.version }}
+          name: Release v${{ steps.extract_version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            release_assets/*
