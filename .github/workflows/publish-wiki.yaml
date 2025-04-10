@@ -2,12 +2,10 @@ name: Publish Wiki
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
     paths:
-      - docs/**
-      - .github/workflows/publish-wiki.yml
-  workflow_dispatch:
+      - 'docs/**'
+      - '.github/workflows/publish-wiki.yaml'
 
 concurrency:
   group: publish-wiki
@@ -17,28 +15,45 @@ permissions:
   contents: write
 
 jobs:
-  publish:
+  publish-wiki:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+      - uses: actions/checkout@v4
+      
       - name: Get last two tags
         id: tags
         run: |
-          CURRENT_TAG=$(git describe --tags --abbrev=0)
-          LATEST_TAG=$(git describe --tags --abbrev=0 $CURRENT_TAG^)
-          echo "current_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
-          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-
-      - name: Update docs with version info
+          TAG1=$(git describe --tags --abbrev=0)
+          TAG2=$(git describe --tags --abbrev=0 $TAG1^)
+          echo "TAG1=$TAG1" >> $GITHUB_OUTPUT
+          echo "TAG2=$TAG2" >> $GITHUB_OUTPUT
+      
+      - name: Update documentation with version info
         run: |
-          find docs/ -type f -exec sed -i "s/\${{ steps.tags.outputs.latest_tag }}/${{ steps.tags.outputs.current_tag }}/g" {} \;
-
+          sed -i "s/Current Version: .*/Current Version: ${{ steps.tags.outputs.TAG1 }}/" docs/Home.md
+          sed -i "s/Previous Version: .*/Previous Version: ${{ steps.tags.outputs.TAG2 }}/" docs/Home.md
+          echo -e "\n## Changes between ${{ steps.tags.outputs.TAG2 }} and ${{ steps.tags.outputs.TAG1 }}\n" >> docs/Release-Notes.md
+          git log --pretty=format:"- %s" ${{ steps.tags.outputs.TAG2 }}..${{ steps.tags.outputs.TAG1 }} >> docs/Release-Notes.md
+      
+      - name: Detect wiki strategy
+        id: wiki
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+          echo "repository=$REPO_NAME" >> $GITHUB_OUTPUT
+          if git clone --quiet "https://${{ github.token }}@github.com/${{ github.repository }}.wiki.git" /tmp/wiki 2>/dev/null; then
+            echo "strategy=clone" >> $GITHUB_OUTPUT
+            rm -rf /tmp/wiki
+          else
+            echo "strategy=init" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Publish to Wiki
         uses: Andrew-Chen-Wang/github-wiki-action@v4
         with:
           path: docs/
-          commit-message: "docs: update documentation [automated]" 
+          commit-message: "docs: update documentation [automated]"
+          strategy: ${{ steps.wiki.outputs.strategy }}
+          repository: ${{ github.repository }}
+          github-server-url: ${{ github.server_url }}
+          token: ${{ github.token }}
+          dry-run: false
