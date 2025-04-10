@@ -1,7 +1,7 @@
 # MKTorrent
 
 [![Current Version](https://img.shields.io/github/v/release/tomcdj71/mktorrent?label=current%20version)](https://github.com/tomcdj71/mktorrent/releases)
-![Github Actions CI CD](https://github.com/tomcdj71/mktorrent/workflows/Github%20Actions%20CI%20CD/badge.svg)
+![Github Actions CI CD](https://github.com/tomcdj71/mktorrent/workflows/Build%20Mktorrent/badge.svg)
 
 A simple command-line utility to create BitTorrent metainfo files.
 
