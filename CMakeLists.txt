@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(mktorrent
-    VERSION 1.4.3
+    VERSION 1.4.5
     DESCRIPTION "A simple command-line utility to create BitTorrent metainfo files, written in C"
     HOMEPAGE_URL "https://github.com/MediaEase/mktorrent"
     LANGUAGES C
@@ -86,6 +86,7 @@ target_link_libraries(mktorrent PRIVATE
 # Install
 include(GNUInstallDirs)
 install(TARGETS mktorrent RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES man/mktorrent.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 # Test suite
 if(MKTORRENT_TEST)
