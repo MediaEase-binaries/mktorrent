@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(mktorrent
-    VERSION 1.4.2
+    VERSION 1.4.3
     DESCRIPTION "A simple command-line utility to create BitTorrent metainfo files, written in C"
     HOMEPAGE_URL "https://github.com/MediaEase/mktorrent"
     LANGUAGES C
@@ -17,6 +17,8 @@ option(MKTORRENT_PTHREADS "Enable POSIX threads for faster hashing" ON)
 option(MKTORRENT_LONG_OPTIONS "Enable GNU-style long options" ON)
 option(MKTORRENT_NO_HASH_CHECK "Disable hash-size consistency check" OFF)
 option(MKTORRENT_USE_GITREV_VERSION "Include git commit in version string" OFF)
+option(MKTORRENT_TEST "Enable test suite" OFF)
+option(MKTORRENT_TEST_PERFORMANCE "Enable performance tests" OFF)
 
 set(MKTORRENT_MAX_OPENFD 100 CACHE STRING "Max open files during scan")
 set(MKTORRENT_PROGRESS_PERIOD 200000 CACHE STRING "Progress update interval in μs")
@@ -84,3 +86,30 @@ target_link_libraries(mktorrent PRIVATE
 # Install
 include(GNUInstallDirs)
 install(TARGETS mktorrent RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# Test suite
+if(MKTORRENT_TEST)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    set(TEST_ENV_VARS
+        MKTORRENT_BINARY=$<TARGET_FILE:mktorrent>
+        PERFORMANCE_TESTS=$<IF:$<BOOL:${MKTORRENT_TEST_PERFORMANCE}>,1,0>
+        PERFORMANCE_LARGE_TESTS=$<IF:$<BOOL:${MKTORRENT_TEST_PERFORMANCE}>,1,0>
+    )
+    
+    add_custom_target(test
+        COMMAND ${CMAKE_COMMAND} -E env
+            ${TEST_ENV_VARS}
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/run_tests.sh
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        DEPENDS mktorrent
+        COMMENT "Running MKTorrent test suite"
+    )
+    
+    add_custom_target(test-data
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/tests/data
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/tests/results
+        COMMENT "Creating test data directories"
+    )
+    
+    add_dependencies(test test-data)
+endif()
