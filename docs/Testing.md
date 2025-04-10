@@ -13,6 +13,34 @@ The test suite is designed to verify MKTorrent's functionality and prevent regre
 - `torrent_parser.py`: Python script to parse and validate torrent files
 - Individual test files for different test categories
 
+## Compilation Options
+
+The test suite can be enabled during compilation using CMake options:
+
+```bash
+# Basic test suite
+cmake -DMKTORRENT_TEST=ON ..
+
+# Test suite with performance tests
+cmake -DMKTORRENT_TEST=ON -DMKTORRENT_TEST_PERFORMANCE=ON ..
+
+# Build and run tests
+make test
+```
+
+### Available Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `MKTORRENT_TEST` | Enable the test suite | OFF |
+| `MKTORRENT_TEST_PERFORMANCE` | Enable performance tests | OFF |
+
+### Dependencies
+
+When enabling tests, the following dependencies are required:
+- Python 3 (for torrent parser)
+- Test data directories (automatically created)
+
 ## Test Categories
 
 1. **Single File Tests** (`test_single_file.sh`)

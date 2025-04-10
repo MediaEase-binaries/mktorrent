@@ -121,13 +121,15 @@ sudo cmake --install build
 
 ### CMake Build Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `MKTORRENT_OPENSSL` | ON | Use OpenSSL's SHA-1 implementation |
-| `MKTORRENT_PTHREADS` | ON | Enable POSIX threads support |
-| `MKTORRENT_LONG_OPTIONS` | ON | Enable GNU-style long options |
-| `MKTORRENT_NO_HASH_CHECK` | OFF | Disable hash-size consistency check |
-| `MKTORRENT_USE_GITREV_VERSION` | OFF | Include git commit in version |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `MKTORRENT_OPENSSL` | Use OpenSSL's SHA-1 implementation | ON |
+| `MKTORRENT_PTHREADS` | Enable POSIX threads for faster hashing | ON |
+| `MKTORRENT_LONG_OPTIONS` | Enable GNU-style long options | ON |
+| `MKTORRENT_NO_HASH_CHECK` | Disable hash-size consistency check | OFF |
+| `MKTORRENT_USE_GITREV_VERSION` | Include git commit in version string | OFF |
+| `MKTORRENT_TEST` | Enable test suite | OFF |
+| `MKTORRENT_TEST_PERFORMANCE` | Enable performance tests | OFF |
 | `CMAKE_BUILD_TYPE` | Release | Build type (Debug/Release/RelWithDebInfo) |
 
 ### Example Configurations
