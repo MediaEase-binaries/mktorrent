@@ -49,7 +49,11 @@ jobs:
       - name: Prepare artifacts
         run: |
           mkdir artifacts
-          full_version="_${{ env.MKTORRENT_VERSION }}_openssl-${{ matrix.openssl }}_pthreads-${{ matrix.pthreads }}-${{ matrix.os }}"
+          sudo apt-get install lsb-release
+          distro=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
+          codename=$(lsb_release -cs)
+          os="$distro-$codename"
+          full_version="_${{ env.MKTORRENT_VERSION }}_openssl-${{ matrix.openssl }}_pthreads-${{ matrix.pthreads }}-${os}"
           echo "FULL_VERSION=$full_version" >> $GITHUB_ENV
 
       - name: Build Debian Package
@@ -143,11 +147,80 @@ jobs:
           mkdir release_assets
           find downloaded_artifacts -type f -exec cp {} release_assets/ \;
 
+      - name: Prepare release notes
+        id: prepare_notes
+        run: |
+          TEMP_DIR=$(mktemp -d)
+          PACKAGES_TABLE="$TEMP_DIR/packages.md"
+          CONFIG_TABLE="$TEMP_DIR/config.md"
+          # Generate packages table
+          {
+            echo "| Package | OpenSSL | PThreads |"
+            echo "| ------- | ------- | -------- |"
+            for f in release_assets/*.deb; do
+              if [ -f "$f" ]; then
+                pkg=$(basename "$f")
+                openssl=$(echo "$pkg" | grep -o "openssl-[[:alnum:]]*" | cut -d'-' -f2)
+                pthreads=$(echo "$pkg" | grep -o "pthreads-[[:alnum:]]*" | cut -d'-' -f2)
+                echo "| $pkg | $openssl | $pthreads |"
+              fi
+            done
+          } > "$PACKAGES_TABLE"
+
+          # Generate config table
+          {
+            echo "| Option | Value |"
+            echo "| ------ | ----- |"
+            echo "| Long Options | Enabled |"
+            echo "| Build Type | RelWithDebInfo |"
+          } > "$CONFIG_TABLE"
+          echo "packages_table<<EOF" >> $GITHUB_OUTPUT
+          cat "$PACKAGES_TABLE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "config_table<<EOF" >> $GITHUB_OUTPUT
+          cat "$CONFIG_TABLE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          rm -rf "$TEMP_DIR"
+
       - name: Create GitHub Release with Assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.extract_version.outputs.version }}
           name: Release v${{ steps.extract_version.outputs.version }}
           generate_release_notes: true
+          body: |
+            # MKTorrent v${{ steps.extract_version.outputs.version }}
+
+            Pre-built MKTorrent packages for creating BitTorrent metainfo files.
+
+            ## 🎯 Features
+
+            - Simple and efficient command-line torrent file creator
+            - Support for both single file and directory torrents
+            - Configurable piece length and multiple announce URLs
+            - Pre-compiled binaries ready to use
+            - Automated builds via GitHub Actions
+
+            ## 📦 Available Packages
+
+            ${{ steps.prepare_notes.outputs.packages_table }}
+
+            ## 🔧 Build Configuration
+
+            ${{ steps.prepare_notes.outputs.config_table }}
+
+            ## 📋 Installation
+
+            ### Manual Installation
+            1. Download the appropriate .deb package for your system
+            2. Install using: `sudo dpkg -i package_name.deb`
+            3. Fix any dependencies if needed: `sudo apt-get install -f`
+
+            ## 🔍 Package Details
+
+            The packages are built with:
+            - System-wide installation in `/usr/bin/mktorrent`
+            - Man page in `/usr/share/man/man1/mktorrent.1`
+            - Compiled on $(date +%Y-%m-%d)
           files: |
             release_assets/*
