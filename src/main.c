@@ -164,37 +164,6 @@ static int close_file(FILE *f)
 }
 
 /*
- * Display program information, version and build configuration
- */
-static void display_version(void)
-{
-	printf("mktorrent " VERSION " (c) 2007, 2009 Emil Renner Berthing\n\n"
-	  "Built in " BUILD_CFG " configuration with the following features:\n\n"
-#ifdef USE_LONG_OPTIONS
-	  "MKTORRENT_LONG_OPTIONS       ON\n"
-#else
-	  "MKTORRENT_LONG_OPTIONS       OFF\n"
-#endif
-#ifdef NO_HASH_CHECK
-	  "MKTORRENT_NO_HASH_CHECK      ON\n"
-#else
-	  "MKTORRENT_NO_HASH_CHECK      OFF\n"
-#endif
-#ifdef USE_OPENSSL
-	  "MKTORRENT_OPENSSL            ON\n"
-#else
-	  "MKTORRENT_OPENSSL            OFF\n"
-#endif
-#ifdef USE_PTHREADS
-	  "MKTORRENT_PTHREADS           ON\n"
-#else
-	  "MKTORRENT_PTHREADS           OFF\n"
-#endif
-	  "MKTORRENT_MAX_OPENFD         " "%d" "\n"
-	  "MKTORRENT_PROGRESS_PERIOD    " "%d" "\n\n", MAX_OPENFD, PROGRESS_PERIOD);
-}
-
-/*
  * Count the number of nodes in a linked list
  */
 static unsigned int count_ll_nodes(struct ll *list)
@@ -215,6 +184,14 @@ static unsigned int count_ll_nodes(struct ll *list)
  */
 int main(int argc, char *argv[])
 {
+	/* Check for --version first */
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-V") == 0) {
+			printf("mktorrent %s (c) 2007, 2009 Emil Renner Berthing\n", VERSION);
+			return EXIT_SUCCESS;
+		}
+	}
+
 	FILE *file = NULL;	/* stream for writing to the metainfo file */
 	unsigned char *hash = NULL; /* hash string */
 	int exit_code = EXIT_SUCCESS;
@@ -249,9 +226,6 @@ int main(int argc, char *argv[])
 	signal(SIGINT, handle_signal);
 	signal(SIGTERM, handle_signal);
 
-	/* Print program information */
-	display_version();
-
 	/* Seed PRNG with current time */
 	struct timespec ts;
 	if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
@@ -263,6 +237,10 @@ int main(int argc, char *argv[])
 	/* Process command line options */
 	int init_result = init(&m, argc, argv);
 	if (init_result != 0) {
+		if (init_result == EXIT_SUCCESS) {
+			/* This is a normal exit (e.g. --version or --help) */
+			return EXIT_SUCCESS;
+		}
 		fprintf(stderr, "Failed to initialize from command line arguments\n");
 		cleanup_metafile(&m);
 		/* Return EXIT_FAILURE on error from init */

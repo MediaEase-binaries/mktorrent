@@ -6,3 +6,5 @@ staging/
 install.sh
 tests/test_data/
 tests/test_results/
+test_data/
+test_results/

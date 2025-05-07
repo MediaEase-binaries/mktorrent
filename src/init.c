@@ -34,6 +34,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #include <fcntl.h>
 #include <time.h>
 #include <ctype.h>
+#include <libgen.h>       /* basename() */
+#include <limits.h>       /* PATH_MAX */
+#include <pthread.h>
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 #include "export.h"
 #include "mktorrent.h"
@@ -49,6 +56,14 @@ EXPORT void cleanup_metafile(struct metafile *m);
 			   file_tree_walk() will open */
 #endif
 
+/*
+ * Display program information, version and build configuration
+ */
+static int display_version(void)
+{
+	printf("mktorrent %s (c) 2007, 2009 Emil Renner Berthing\n", VERSION);
+	return EXIT_SUCCESS;
+}
 
 static void strip_ending_dirseps(char *s)
 {
@@ -63,7 +78,7 @@ static void strip_ending_dirseps(char *s)
 		*end = '\0';
 }
 
-static const char *basename(const char *s)
+static const char *get_basename(const char *s)
 {
 	const char *r = s;
 
@@ -177,7 +192,6 @@ static int is_valid_url(const char *url)
  * validate_url: no longer used, kept for backward compatibility
  * Errors:
  * [ 37%] Building C object CMakeFiles/mktorrent.dir/src/init.c.o
- * /home/thomas/Dev/GitHub/Organizations/MediaEase/binary_repos/old/mktorrent/src/init.c: In function 'get_slist':
  * /home/thomas/Dev/GitHub/Organizations/MediaEase/binary_repos/old/mktorrent/src/init.c:187:42: warning: unused parameter 'validate_url' [-Wunused-parameter]
  * /187 | static struct ll *get_slist(char *s, int validate_url)
  * |                                      ~~~~^~~~~~~~~~~~
@@ -386,6 +400,7 @@ static void print_help()
 	  "                                default is the number of CPU cores\n"
 #endif
 	  "-v, --verbose                 : be verbose\n"
+	  "-V, --version                 : display version information\n"
 	  "-w, --web-seed=<url>[,<url>]* : add web seed URLs\n"
 	  "                                additional -w adds more URLs\n"
 	  "-x, --cross-seed              : ensure info hash is unique for easier cross-seeding\n"
@@ -411,12 +426,13 @@ static void print_help()
 	  "                    default is the number of CPU cores\n"
 #endif
 	  "-v                : be verbose\n"
+	  "-V                : display version information\n"
 	  "-w <url>[,<url>]* : add web seed URLs\n"
 	  "                    additional -w adds more URLs\n"
 	  "-x                : ensure info hash is unique for easier cross-seeding\n"
 #endif
 	  "\nPlease send bug reports, patches, feature requests, praise and\n"
-	  "general gossip about the program to: mktorrent@rudde.org\n");
+	  "general gossip about the program to: contact.tomc@yahoo.fr\n");
 }
 
 /*
@@ -643,11 +659,20 @@ EXPORT int init(struct metafile *m, int argc, char *argv[])
 		{"threads", 1, NULL, 't'},
 #endif
 		{"verbose", 0, NULL, 'v'},
+		{"version", 0, NULL, 'V'},
 		{"web-seed", 1, NULL, 'w'},
 		{"cross-seed", 0, NULL, 'x'},
 		{NULL, 0, NULL, 0}
 	};
 #endif
+
+	/* Check for --version first */
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-V") == 0) {
+			display_version();
+			return EXIT_SUCCESS;
+		}
+	}
 
 	m->announce_list = ll_new();
 	FATAL_IF0(m->announce_list == NULL, "out of memory\n");
@@ -663,9 +688,9 @@ EXPORT int init(struct metafile *m, int argc, char *argv[])
 
 	/* now parse the command line options */
 #ifdef USE_PTHREADS
-#define OPT_STRING "a:c:e:dDfhl:n:o:ps:t:vw:x"
+#define OPT_STRING "a:c:e:dDfhl:n:o:ps:t:vw:xV"
 #else
-#define OPT_STRING "a:c:e:dDfhl:n:o:ps:vw:x"
+#define OPT_STRING "a:c:e:dDfhl:n:o:ps:vw:xV"
 #endif
 #ifdef USE_LONG_OPTIONS
 	while ((c = getopt_long(argc, argv, OPT_STRING,
@@ -785,7 +810,7 @@ EXPORT int init(struct metafile *m, int argc, char *argv[])
 
 	/* if the torrent name isn't set use the basename of the target */
 	if (m->torrent_name == NULL)
-		m->torrent_name = basename(argv[optind]);
+		m->torrent_name = get_basename(argv[optind]);
 
 	/* if we still don't have a torrent name, default to "unnamed" */
 	if (m->torrent_name == NULL || *m->torrent_name == '\0') {
