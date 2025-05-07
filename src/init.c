@@ -192,7 +192,7 @@ static int is_valid_url(const char *url)
  * validate_url: no longer used, kept for backward compatibility
  * Errors:
  * [ 37%] Building C object CMakeFiles/mktorrent.dir/src/init.c.o
- * /home/thomas/Dev/GitHub/Organizations/MediaEase/binary_repos/old/mktorrent/src/init.c:187:42: warning: unused parameter 'validate_url' [-Wunused-parameter]
+ * /home/thomas/Dev/GitHub/Organizations/tomcj71/binary_repos/old/mktorrent/src/init.c:187:42: warning: unused parameter 'validate_url' [-Wunused-parameter]
  * /187 | static struct ll *get_slist(char *s, int validate_url)
  * |                                      ~~~~^~~~~~~~~~~~
  * [ 50%] Building C object CMakeFiles/mktorrent.dir/src/ll.c.o

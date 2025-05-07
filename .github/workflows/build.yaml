@@ -86,7 +86,7 @@ jobs:
           Depends: libc6
           Section: net
           Priority: optional
-          Homepage: https://github.com/MediaEase/mktorrent
+          Homepage: https://github.com/tomcj71/mktorrent
           EOF
           cat "$temp_file" >> "$PKG_DIR/DEBIAN/control"
           cd "$PKG_DIR"
