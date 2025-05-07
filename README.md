@@ -67,7 +67,7 @@ sudo gem install fpm
 
 ```bash
 # Clone the repository
-git clone https://github.com/MediaEase/mktorrent.git
+git clone https://github.com/tomcdj71/mktorrent.git
 cd mktorrent
 
 # Build with your desired options
@@ -91,7 +91,7 @@ mkdir -p staging/usr/share/man/man1
 cp build/mktorrent staging/usr/bin/
 
 # Copy man page
-cp mktorrent.1 staging/usr/share/man/man1/
+cp man/mktorrent.1 staging/usr/share/man/man1/
 
 # Make executable
 chmod +x staging/usr/bin/mktorrent
@@ -109,7 +109,7 @@ fpm -s dir -t deb -C staging \
   --version $VERSION \
   --architecture amd64 \
   --description "Simple command-line torrent file creator" \
-  --url "https://github.com/MediaEase/mktorrent" \
+  --url "https://github.com/tomcdj71/mktorrent" \
   --maintainer "Your Name <your.email@example.com>" \
   --license "Public Domain" \
   --depends "libc6" \
