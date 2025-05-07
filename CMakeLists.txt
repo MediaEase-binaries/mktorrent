@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(mktorrent
-    VERSION 1.4.5
+    VERSION 1.4.6
     DESCRIPTION "A simple command-line utility to create BitTorrent metainfo files, written in C"
     HOMEPAGE_URL "https://github.com/MediaEase/mktorrent"
     LANGUAGES C
@@ -70,6 +70,7 @@ target_compile_options(mktorrent PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(mktorrent PRIVATE
     _FILE_OFFSET_BITS=64
     VERSION="${MKTORRENT_VERSION}"
+    BUILD_CFG="${CMAKE_BUILD_TYPE}"
     $<$<BOOL:${MKTORRENT_PTHREADS}>:USE_PTHREADS>
     $<$<BOOL:${MKTORRENT_OPENSSL}>:USE_OPENSSL>
     $<$<BOOL:${MKTORRENT_LONG_OPTIONS}>:USE_LONG_OPTIONS>
@@ -100,8 +101,9 @@ if(MKTORRENT_TEST)
     add_custom_target(test
         COMMAND ${CMAKE_COMMAND} -E env
             ${TEST_ENV_VARS}
-            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/run_tests.sh
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            MKTORRENT=$<TARGET_FILE:mktorrent>
+            /bin/bash ${CMAKE_SOURCE_DIR}/tests/run_tests.sh
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/tests
         DEPENDS mktorrent
         COMMENT "Running MKTorrent test suite"
     )
